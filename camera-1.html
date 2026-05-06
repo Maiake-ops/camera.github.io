@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Camera</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-upper: #3aad5c;
+    --green-lower: #1e6e39;
+    --text-dark: #1a1a1a;
+    --text-muted: #888;
+  }
+
+  html, body {
+    height: 100%; width: 100%;
+    overflow: hidden;
+    background: var(--green-upper);
+    font-family: 'Sora', sans-serif;
+  }
+
+  .shell {
+    display: flex; flex-direction: column;
+    height: 100dvh; width: 100%;
+    max-width: 430px; margin: 0 auto;
+    position: relative;
+  }
+
+  /* ── Viewport ─────────────────────────────────── */
+  .viewport {
+    flex: 1 1 80%;
+    background-image: radial-gradient(ellipse at 50% 40%, #4dbf6e 0%, #3aad5c 55%, #2a8a47 100%);
+    display: flex; justify-content: center; align-items: center;
+    position: relative; overflow: hidden;
+  }
+  .viewport::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size: 32px 32px; pointer-events: none;
+  }
+
+  /* ── Card ─────────────────────────────────────── */
+  .card {
+    background: #fff; border-radius: 18px;
+    padding: 10px 10px 14px;
+    width: min(72%, 260px);
+    box-shadow: 0 8px 32px rgba(0,0,0,.22), 0 2px 6px rgba(0,0,0,.12);
+    display: flex; flex-direction: column; gap: 10px;
+    position: relative; z-index: 1;
+    transition: opacity .2s ease;
+  }
+  .card.captured { animation: cardFadeIn .5s cubic-bezier(.22,1,.36,1) forwards; }
+  @keyframes cardFadeIn {
+    from { opacity: 0; transform: scale(.93); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* ── Media Box ────────────────────────────────── */
+  .media-box {
+    width: 100%; aspect-ratio: 3 / 4;
+    background: linear-gradient(145deg, #e09050 0%, #c87030 60%, #a85c20 100%);
+    border-radius: 10px; position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .media-box video {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover; border-radius: 10px;
+  }
+  .media-box::before, .media-box::after {
+    content: ''; position: absolute;
+    width: 18px; height: 18px;
+    border-color: rgba(255,255,255,.45); border-style: solid;
+    z-index: 2; pointer-events: none;
+  }
+  .media-box::before { top: 8px; left: 8px; border-width: 2px 0 0 2px; border-radius: 3px 0 0 0; }
+  .media-box::after  { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; border-radius: 0 0 3px 0; }
+
+  .placeholder-label {
+    font-family: 'DM Mono', monospace; font-size: .72rem;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: rgba(255,255,255,.55); z-index: 1; position: relative;
+    transition: opacity .4s;
+  }
+  .media-box.live .placeholder-label { opacity: 0; pointer-events: none; }
+
+  /* ── Metadata ─────────────────────────────────── */
+  .meta { padding: 0 4px; display: flex; flex-direction: column; gap: 4px; }
+
+  .meta-name-row {
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 6px;
+  }
+
+  /* ── Editable device name ─────────────────────── */
+  .name-wrap {
+    flex: 1; min-width: 0;
+    position: relative;
+    cursor: text;
+  }
+
+  /* the visible label */
+  .meta-title {
+    font-size: .78rem; font-weight: 700; color: var(--text-dark);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: block;
+    padding: 2px 4px 2px 3px;
+    border-radius: 5px;
+    border: 1.5px solid transparent;
+    transition: border-color .15s, background .15s;
+    line-height: 1.4;
+    /* pencil hint on hover */
+  }
+  .name-wrap:hover .meta-title {
+    border-color: #d4e8d8;
+    background: #f5fbf6;
+  }
+
+  /* small pencil icon hint */
+  .name-wrap .edit-hint {
+    position: absolute;
+    right: -2px; top: 50%;
+    transform: translateY(-50%);
+    font-size: .55rem;
+    opacity: 0;
+    transition: opacity .15s;
+    pointer-events: none;
+    color: #3aad5c;
+  }
+  .name-wrap:hover .edit-hint { opacity: 1; }
+
+  /* the inline input — hidden by default */
+  .name-input {
+    display: none;
+    width: 100%;
+    font-family: 'Sora', sans-serif;
+    font-size: .78rem; font-weight: 700;
+    color: var(--text-dark);
+    background: #f5fbf6;
+    border: 1.5px solid #3aad5c;
+    border-radius: 5px;
+    padding: 2px 4px 2px 3px;
+    outline: none;
+    line-height: 1.4;
+    box-shadow: 0 0 0 3px rgba(58,173,92,.12);
+  }
+
+  /* editing state */
+  .name-wrap.editing .meta-title  { display: none; }
+  .name-wrap.editing .name-input  { display: block; }
+  .name-wrap.editing .edit-hint   { display: none; }
+
+  /* flash confirm animation on the label */
+  .meta-title.saved {
+    animation: savedFlash .4s ease forwards;
+  }
+  @keyframes savedFlash {
+    0%   { background: #d6f5e0; border-color: #3aad5c; }
+    100% { background: transparent; border-color: transparent; }
+  }
+
+  /* ── Download button ──────────────────────────── */
+  .dl-btn {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 7px;
+    border: 1.5px solid #e0e0e0; background: #f5f5f5; color: #555;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent;
+    transition: background .15s, border-color .15s, color .15s, transform .12s;
+  }
+  .dl-btn:hover  { background: #e8f5ec; border-color: #3aad5c; color: #2a8a47; }
+  .dl-btn:active { transform: scale(.88); }
+  .dl-btn:disabled { opacity: .3; cursor: default; }
+  .dl-btn svg { width: 13px; height: 13px; }
+  .dl-btn.ready {
+    background: #e8f5ec; border-color: #3aad5c; color: #2a8a47;
+    animation: dlPulse .5s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes dlPulse {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+
+  .meta-specs {
+    font-family: 'DM Mono', monospace; font-size: .6rem; color: var(--text-muted);
+    letter-spacing: .05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* ── Device picker ────────────────────────────── */
+  .device-row { padding: 0 4px; position: relative; }
+  .device-select {
+    width: 100%; font-family: 'DM Mono', monospace; font-size: .58rem;
+    letter-spacing: .04em; color: #444; background: #f7f7f7;
+    border: 1.5px solid #e4e4e4; border-radius: 7px;
+    padding: 5px 24px 5px 8px; appearance: none; -webkit-appearance: none;
+    cursor: pointer; outline: none; transition: border-color .2s; text-overflow: ellipsis;
+  }
+  .device-select:focus { border-color: #3aad5c; }
+  .device-row::after {
+    content: ''; position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%); width: 0; height: 0;
+    border-left: 4px solid transparent; border-right: 4px solid transparent;
+    border-top: 5px solid #888; pointer-events: none;
+  }
+
+  /* ── Control Bar ──────────────────────────────── */
+  .control-bar {
+    flex: 0 0 20%;
+    background: linear-gradient(180deg, #1e6e39 0%, #174f2a 100%);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .control-bar::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 1px; background: rgba(255,255,255,.12);
+  }
+
+  .shutter {
+    width: 64px; height: 64px; border-radius: 50%;
+    border: 5px solid #fff; background: transparent;
+    cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 0 0 2px rgba(255,255,255,.15), 0 4px 18px rgba(0,0,0,.35);
+    transition: transform .1s ease; position: relative;
+  }
+  .shutter::after {
+    content: ''; position: absolute; inset: 5px;
+    border-radius: 50%; background: rgba(255,255,255,.08);
+  }
+  .shutter:hover  { transform: scale(1.06); }
+  .shutter:active { transform: scale(.91); }
+  .shutter:disabled { opacity: .45; cursor: default; transform: none; }
+
+  .cam-toggle {
+    position: absolute; right: 28px;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,.14); border: 1.5px solid rgba(255,255,255,.25);
+    color: #fff; font-size: 1.1rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .2s; outline: none; -webkit-tap-highlight-color: transparent;
+  }
+  .cam-toggle:hover { background: rgba(255,255,255,.28); }
+  .cam-toggle.spin  { animation: spinOnce .4s ease forwards; }
+  @keyframes spinOnce { to { transform: rotate(180deg); } }
+
+  /* ── Thumbnails ───────────────────────────────── */
+  .thumb-strip {
+    position: absolute; bottom: 10px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 5px; z-index: 5; pointer-events: none;
+  }
+  .thumb {
+    width: 32px; height: 32px; border-radius: 5px;
+    border: 2px solid rgba(255,255,255,.6); object-fit: cover;
+    box-shadow: 0 2px 6px rgba(0,0,0,.4);
+    animation: thumbPop .3s cubic-bezier(.34,1.56,.64,1) forwards;
+    transform: scale(0); pointer-events: all; cursor: pointer;
+  }
+  @keyframes thumbPop {
+    from { transform: scale(0); }
+    to   { transform: scale(1); }
+  }
+
+  /* ═══ FULL-SCREEN → CARD SHRINK ══════════════════ */
+  .capture-overlay {
+    position: fixed; z-index: 200; overflow: hidden; pointer-events: none;
+    top: 0; left: 0; width: 100vw; height: 100vh; border-radius: 0;
+  }
+  .capture-overlay img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .capture-overlay::after {
+    content: ''; position: absolute; inset: 0; background: #fff;
+    animation: flashPop .38s ease-out forwards;
+  }
+  @keyframes flashPop { 0% { opacity: .9; } 100% { opacity: 0; } }
+  .capture-overlay.shrinking {
+    transition:
+      top    .6s cubic-bezier(.22,1,.36,1),
+      left   .6s cubic-bezier(.22,1,.36,1),
+      width  .6s cubic-bezier(.22,1,.36,1),
+      height .6s cubic-bezier(.22,1,.36,1),
+      border-radius .6s cubic-bezier(.22,1,.36,1),
+      opacity .12s ease .56s;
+    opacity: 0;
+  }
+
+  /* ── Permission overlay ───────────────────────── */
+  .perm-overlay {
+    position: absolute; inset: 0; background: rgba(16,16,16,.9);
+    border-radius: 10px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px;
+    z-index: 10; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    transition: opacity .35s;
+  }
+  .perm-overlay.hidden { opacity: 0; pointer-events: none; }
+  .perm-icon { font-size: 2.2rem; }
+  .perm-msg {
+    font-size: .6rem; font-weight: 600; letter-spacing: .07em;
+    text-transform: uppercase; color: rgba(255,255,255,.7);
+    text-align: center; padding: 0 14px;
+  }
+  .perm-btn {
+    margin-top: 4px; background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.3); color: #fff;
+    font-family: 'Sora', sans-serif; font-size: .64rem; font-weight: 600;
+    letter-spacing: .08em; text-transform: uppercase;
+    padding: 7px 20px; border-radius: 99px; cursor: pointer; transition: background .2s;
+  }
+  .perm-btn:hover { background: rgba(255,255,255,.3); }
+  .perm-btn:disabled { opacity: .5; cursor: default; }
+  .perm-error {
+    font-size: .57rem; color: #ff8a80; text-align: center;
+    padding: 0 12px; line-height: 1.4; display: none;
+  }
+  .perm-error.show { display: block; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <main class="viewport">
+    <div class="card" id="card">
+
+      <div class="media-box" id="mediaBox">
+        <video id="video" autoplay playsinline muted></video>
+        <span class="placeholder-label">Picture</span>
+        <div class="perm-overlay" id="permOverlay">
+          <span class="perm-icon">📷</span>
+          <span class="perm-msg">Camera access needed</span>
+          <button class="perm-btn" id="permBtn">Allow Camera</button>
+          <span class="perm-error" id="permError"></span>
+        </div>
+      </div>
+
+      <div class="device-row" id="deviceRow" style="display:none">
+        <select class="device-select" id="deviceSelect"></select>
+      </div>
+
+      <div class="meta">
+        <div class="meta-name-row">
+
+          <!-- editable name wrapper -->
+          <div class="name-wrap" id="nameWrap" title="Click to rename">
+            <span class="meta-title" id="deviceName">Device name</span>
+            <span class="edit-hint">✏️</span>
+            <input class="name-input" id="nameInput" type="text" maxlength="40" spellcheck="false">
+          </div>
+
+          <button class="dl-btn" id="dlBtn" disabled title="Download with frame">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 2v8M5 7l3 3 3-3"/><path d="M2 12h12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="meta-specs" id="deviceSpecs">—mm  f/—  1/—s  ISO—</div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="control-bar">
+    <div class="thumb-strip" id="thumbStrip"></div>
+    <button class="shutter" id="shutterBtn" aria-label="Take photo"></button>
+    <button class="cam-toggle" id="camToggle" title="Flip camera">🔄</button>
+  </footer>
+
+</div>
+<script>
+(() => {
+  const video        = document.getElementById('video');
+  const mediaBox     = document.getElementById('mediaBox');
+  const card         = document.getElementById('card');
+  const shutterBtn   = document.getElementById('shutterBtn');
+  const camToggle    = document.getElementById('camToggle');
+  const permOverlay  = document.getElementById('permOverlay');
+  const permBtn      = document.getElementById('permBtn');
+  const permError    = document.getElementById('permError');
+  const deviceName   = document.getElementById('deviceName');
+  const deviceSpecs  = document.getElementById('deviceSpecs');
+  const thumbStrip   = document.getElementById('thumbStrip');
+  const dlBtn        = document.getElementById('dlBtn');
+  const deviceRow    = document.getElementById('deviceRow');
+  const deviceSelect = document.getElementById('deviceSelect');
+  const nameWrap     = document.getElementById('nameWrap');
+  const nameInput    = document.getElementById('nameInput');
+
+  let currentStream  = null;
+  let activeDeviceId = null;
+  let isLive         = false;
+  let busy           = false;
+  let thumbCount     = 0;
+  let lastFramedURL  = null;
+  const MAX_THUMBS   = 4;
+
+  /* ── utils ─────────────────────────────────────── */
+  const randOf = a => a[Math.floor(Math.random() * a.length)];
+  function fakeSpecs() {
+    return `${randOf([24,26,28,35,50])}mm  f/${randOf(['1.8','2.0','2.2','2.4'])}  1/${randOf([60,100,125,250,500])}s  ISO${randOf([50,64,100,200,400])}`;
+  }
+  function cleanLabel(raw) {
+    if (!raw) return 'Unknown Camera';
+    return raw.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)/gi, '').trim() || raw;
+  }
+
+  /* ══════════════════════════════════════════════
+     INLINE NAME EDITING
+  ══════════════════════════════════════════════ */
+  function startEditing() {
+    nameInput.value = deviceName.textContent;
+    nameWrap.classList.add('editing');
+    nameInput.focus();
+    nameInput.select();
+  }
+
+  function commitEdit() {
+    const val = nameInput.value.trim();
+    if (val) {
+      deviceName.textContent = val;
+      // green flash to confirm
+      deviceName.classList.remove('saved');
+      void deviceName.offsetWidth;
+      deviceName.classList.add('saved');
+    }
+    nameWrap.classList.remove('editing');
+  }
+
+  function cancelEdit() {
+    nameWrap.classList.remove('editing');
+  }
+
+  // click on the label → enter edit mode
+  nameWrap.addEventListener('click', () => {
+    if (!nameWrap.classList.contains('editing')) startEditing();
+  });
+
+  // Enter = confirm, Escape = cancel
+  nameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); commitEdit(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+  });
+
+  // clicking away from the input also confirms
+  nameInput.addEventListener('blur', commitEdit);
+
+  // prevent card clicks from propagating while editing
+  nameInput.addEventListener('click', e => e.stopPropagation());
+
+  /* ══════════════════════════════════════════════
+     FRAME BUILDER
+  ══════════════════════════════════════════════ */
+  async function buildFramedImage(photoDataURL, nameText, specsText) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const SCALE  = 2;
+        const cardW  = 800 * SCALE;
+        const PAD    = 28 * SCALE;
+        const photoW = cardW - PAD * 2;
+        const photoH = photoW * (4 / 3);
+        const metaH  = 100 * SCALE;
+        const cardH  = PAD + photoH + PAD * 0.8 + metaH + PAD;
+
+        const cvs = document.createElement('canvas');
+        cvs.width = cardW; cvs.height = cardH;
+        const ctx = cvs.getContext('2d');
+
+        const r = 36 * SCALE;
+        ctx.fillStyle = '#ffffff';
+        roundRect(ctx, 0, 0, cardW, cardH, r); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.06)'; ctx.lineWidth = 2 * SCALE;
+        roundRect(ctx, SCALE, SCALE, cardW - 2*SCALE, cardH - 2*SCALE, r); ctx.stroke();
+
+        // photo
+        const imgR = 18 * SCALE;
+        ctx.save();
+        roundRect(ctx, PAD, PAD, photoW, photoH, imgR); ctx.clip();
+        const sr = img.width / img.height;
+        const dr = photoW / photoH;
+        let sx = 0, sy = 0, sw = img.width, sh = img.height;
+        if (sr > dr) { sw = img.height * dr; sx = (img.width - sw) / 2; }
+        else         { sh = img.width / dr;  sy = (img.height - sh) / 2; }
+        ctx.drawImage(img, sx, sy, sw, sh, PAD, PAD, photoW, photoH);
+        ctx.restore();
+
+        // brackets
+        const bOff = 18*SCALE, bLen = 26*SCALE;
+        ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3*SCALE; ctx.lineCap = 'round';
+        drawBracket(ctx, PAD+bOff, PAD+bOff, bLen, 1, 1);
+        drawBracket(ctx, PAD+photoW-bOff, PAD+photoH-bOff, bLen, -1, -1);
+
+        // divider
+        const metaY = PAD + photoH + PAD * 0.6;
+        ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 1.5*SCALE;
+        ctx.beginPath(); ctx.moveTo(PAD, metaY); ctx.lineTo(cardW-PAD, metaY); ctx.stroke();
+
+        // device name
+        const nameY = metaY + 28*SCALE;
+        ctx.fillStyle = '#1a1a1a';
+        ctx.font = `700 ${22*SCALE}px 'Sora', sans-serif`;
+        ctx.textBaseline = 'alphabetic';
+        const maxW = cardW - PAD*2 - 60*SCALE;
+        let nameStr = nameText;
+        while (ctx.measureText(nameStr).width > maxW && nameStr.length > 4)
+          nameStr = nameStr.slice(0,-4) + '…';
+        ctx.fillText(nameStr, PAD, nameY);
+
+        // camera icon
+        const iS = 18*SCALE, iX = cardW-PAD-iS, iY = nameY-iS*.85;
+        ctx.fillStyle = '#3aad5c';
+        drawCameraIcon(ctx, iX, iY, iS);
+
+        // specs
+        ctx.fillStyle = '#999';
+        ctx.font = `400 ${15*SCALE}px 'DM Mono', monospace`;
+        ctx.fillText(specsText, PAD, nameY + 22*SCALE);
+
+        resolve(cvs.toDataURL('image/jpeg', .92));
+      };
+      img.src = photoDataURL;
+    });
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);
+    ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);
+    ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+  }
+  function drawBracket(ctx,cx,cy,len,dx,dy) {
+    ctx.beginPath();
+    ctx.moveTo(cx+dx*len,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+dy*len);
+    ctx.stroke();
+  }
+  function drawCameraIcon(ctx,x,y,s) {
+    ctx.beginPath(); ctx.roundRect(x,y+s*.2,s,s*.7,s*.15); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x+s*.5,y+s*.55,s*.2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#3aad5c'; ctx.beginPath(); ctx.roundRect(x+s*.3,y+s*.1,s*.3,s*.18,s*.08); ctx.fill();
+  }
+
+  /* ══════════════════════════════════════════════
+     CAMERA
+  ══════════════════════════════════════════════ */
+  async function loadDevices() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter(d => d.kind === 'videoinput');
+      deviceSelect.innerHTML = '';
+      cams.forEach((cam, i) => {
+        const opt = document.createElement('option');
+        opt.value = cam.deviceId;
+        opt.textContent = cam.label ? cleanLabel(cam.label) : `Camera ${i+1}`;
+        if (cam.deviceId === activeDeviceId) opt.selected = true;
+        deviceSelect.appendChild(opt);
+      });
+      deviceRow.style.display = cams.length > 1 ? '' : 'none';
+    } catch(_) { deviceRow.style.display = 'none'; }
+  }
+
+  async function startCamera(deviceId) {
+    permBtn.textContent = 'Starting…'; permBtn.disabled = true;
+    permError.classList.remove('show');
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: deviceId
+          ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 960 } }
+          : { facingMode: 'environment',     width: { ideal: 1280 }, height: { ideal: 960 } },
+        audio: false
+      });
+      currentStream = stream;
+      video.srcObject = stream;
+      const track = stream.getVideoTracks()[0];
+      activeDeviceId = track.getSettings().deviceId || null;
+      const label = (track.label || '').toLowerCase();
+      const isFront = label.includes('front') || label.includes('facetime') || label.includes('user');
+      video.style.transform = isFront ? 'scaleX(-1)' : 'none';
+      isLive = true;
+      mediaBox.classList.add('live');
+      permOverlay.classList.add('hidden');
+      const friendly = cleanLabel(track.label);
+      deviceName.textContent  = friendly.length > 30 ? friendly.slice(0,28)+'…' : friendly;
+      deviceSpecs.textContent = fakeSpecs();
+      await loadDevices();
+    } catch(err) {
+      isLive = false;
+      permBtn.textContent = 'Allow Camera'; permBtn.disabled = false;
+      permOverlay.classList.remove('hidden');
+      const msg =
+        err.name === 'NotAllowedError'   ? 'Permission denied. Enable camera in browser settings.' :
+        err.name === 'NotFoundError'     ? 'No camera device found.' :
+        err.name === 'NotSupportedError' ? 'Requires HTTPS or localhost.' :
+        `Error: ${err.message}`;
+      permError.textContent = msg; permError.classList.add('show');
+    }
+  }
+
+  deviceSelect.addEventListener('change', () => startCamera(deviceSelect.value));
+  permBtn.addEventListener('click', () => startCamera(null));
+  camToggle.addEventListener('click', () => {
+    const opts = Array.from(deviceSelect.options);
+    if (opts.length > 1) {
+      const next = (opts.findIndex(o => o.selected) + 1) % opts.length;
+      deviceSelect.selectedIndex = next;
+      startCamera(opts[next].value);
+    } else { startCamera(null); }
+    camToggle.classList.add('spin');
+    camToggle.addEventListener('animationend', () => camToggle.classList.remove('spin'), { once: true });
+  });
+
+  /* ══════════════════════════════════════════════
+     DOWNLOAD
+  ══════════════════════════════════════════════ */
+  dlBtn.addEventListener('click', () => {
+    if (!lastFramedURL) return;
+    const a = document.createElement('a');
+    a.href = lastFramedURL; a.download = `framed_${Date.now()}.jpg`;
+    a.click();
+  });
+
+  /* ══════════════════════════════════════════════
+     CAPTURE
+  ══════════════════════════════════════════════ */
+  function capture() {
+    if (busy) return;
+    // if user is editing name, commit first
+    if (nameWrap.classList.contains('editing')) commitEdit();
+
+    busy = true; shutterBtn.disabled = true;
+
+    const cvs = document.createElement('canvas');
+    if (isLive && video.readyState >= 2) {
+      cvs.width = video.videoWidth||640; cvs.height = video.videoHeight||480;
+      const ctx = cvs.getContext('2d');
+      const lbl = (currentStream?.getVideoTracks()[0]?.label||'').toLowerCase();
+      if (lbl.includes('front')||lbl.includes('facetime')||lbl.includes('user')) {
+        ctx.translate(cvs.width,0); ctx.scale(-1,1);
+      }
+      ctx.drawImage(video,0,0);
+    } else {
+      cvs.width=480; cvs.height=640;
+      const ctx=cvs.getContext('2d');
+      const g=ctx.createLinearGradient(0,0,0,640);
+      g.addColorStop(0,'#e09050'); g.addColorStop(1,'#a85c20');
+      ctx.fillStyle=g; ctx.fillRect(0,0,480,640);
+    }
+    const rawDataURL = cvs.toDataURL('image/jpeg', .92);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'capture-overlay';
+    const img = new Image(); img.src = rawDataURL;
+    overlay.appendChild(img);
+    document.body.appendChild(overlay);
+
+    card.style.opacity = '0'; card.style.transition = 'none';
+
+    const currentNameText  = deviceName.textContent;
+    const newSpecs         = fakeSpecs();
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const rect = mediaBox.getBoundingClientRect();
+      overlay.classList.add('shrinking');
+      overlay.style.top          = rect.top    + 'px';
+      overlay.style.left         = rect.left   + 'px';
+      overlay.style.width        = rect.width  + 'px';
+      overlay.style.height       = rect.height + 'px';
+      overlay.style.borderRadius = '10px';
+
+      setTimeout(() => {
+        card.style.transition = '';
+        card.classList.add('captured');
+        card.addEventListener('animationend', () => card.classList.remove('captured'), { once: true });
+        deviceSpecs.textContent = newSpecs;
+      }, 260);
+
+      const cleanup = () => {
+        overlay.remove();
+        card.style.opacity = '';
+        busy = false; shutterBtn.disabled = false;
+        buildFramedImage(rawDataURL, currentNameText, newSpecs).then(framedURL => {
+          lastFramedURL = framedURL;
+          dlBtn.disabled = false;
+          dlBtn.classList.remove('ready'); void dlBtn.offsetWidth;
+          dlBtn.classList.add('ready');
+          addThumb(framedURL);
+        });
+      };
+      overlay.addEventListener('transitionend', cleanup, { once: true });
+      setTimeout(cleanup, 850);
+    }));
+  }
+
+  function addThumb(src) {
+    if (thumbCount >= MAX_THUMBS) { thumbStrip.removeChild(thumbStrip.firstChild); thumbCount--; }
+    const img = document.createElement('img');
+    img.className='thumb'; img.src=src; img.title='Tap to download';
+    img.addEventListener('click', () => {
+      const a=document.createElement('a'); a.href=src; a.download=`framed_${Date.now()}.jpg`; a.click();
+    });
+    thumbStrip.appendChild(img); thumbCount++;
+  }
+
+  shutterBtn.addEventListener('click', capture);
+  document.addEventListener('keydown', e => {
+    if (e.code==='Space'||e.code==='Enter') { e.preventDefault(); capture(); }
+  });
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    permError.textContent='Camera API not available (requires HTTPS or localhost).';
+    permError.classList.add('show'); permBtn.disabled=true;
+  } else { startCamera(null); }
+})();
+</script>
+</body>
+</html>
