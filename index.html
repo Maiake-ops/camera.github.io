@@ -523,4 +523,326 @@
     zoomLabel.textContent = `${currentZoom.toFixed(1)}×`;
     if (activeTrack) {
       try {
-        await activeTrack.applyConstraints({ advanced: [{ zoom: currentZoom 
+        await activeTrack.applyConstraints({ advanced: [{ zoom: currentZoom }] });
+        updateSpecs();
+      } catch(_) {}
+    }
+  });
+
+  /* ══════════════════════════════════════════════
+     INLINE NAME EDITING
+  ══════════════════════════════════════════════ */
+  function startEditing() {
+    nameInput.value = deviceName.textContent;
+    nameWrap.classList.add('editing');
+    nameInput.focus(); nameInput.select();
+  }
+  function commitEdit() {
+    const val = nameInput.value.trim();
+    if (val) {
+      deviceName.textContent = val;
+      deviceName.classList.remove('saved');
+      void deviceName.offsetWidth;
+      deviceName.classList.add('saved');
+    }
+    nameWrap.classList.remove('editing');
+  }
+  function cancelEdit() { nameWrap.classList.remove('editing'); }
+
+  nameWrap.addEventListener('click', () => { if (!nameWrap.classList.contains('editing')) startEditing(); });
+  nameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); commitEdit(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+  });
+  nameInput.addEventListener('blur', commitEdit);
+  nameInput.addEventListener('click', e => e.stopPropagation());
+
+  /* ══════════════════════════════════════════════
+     FRAME BUILDER
+  ══════════════════════════════════════════════ */
+  async function buildFramedImage(photoDataURL, nameText, specsText) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const SCALE  = 2;
+        const cardW  = 800 * SCALE;
+        const PAD    = 28 * SCALE;
+        const photoW = cardW - PAD * 2;
+        const photoH = photoW * (4 / 3);
+        const metaH  = 110 * SCALE;
+        const cardH  = PAD + photoH + PAD * 0.8 + metaH + PAD;
+
+        const cvs = document.createElement('canvas');
+        cvs.width = cardW; cvs.height = cardH;
+        const ctx = cvs.getContext('2d');
+
+        const r = 36 * SCALE;
+        ctx.fillStyle = '#ffffff';
+        roundRect(ctx, 0, 0, cardW, cardH, r); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.06)'; ctx.lineWidth = 2 * SCALE;
+        roundRect(ctx, SCALE, SCALE, cardW - 2*SCALE, cardH - 2*SCALE, r); ctx.stroke();
+
+        // photo
+        const imgR = 18 * SCALE;
+        ctx.save();
+        roundRect(ctx, PAD, PAD, photoW, photoH, imgR); ctx.clip();
+        const sr = img.width / img.height;
+        const dr = photoW / photoH;
+        let sx=0, sy=0, sw=img.width, sh=img.height;
+        if (sr > dr) { sw = img.height*dr; sx = (img.width-sw)/2; }
+        else         { sh = img.width/dr;  sy = (img.height-sh)/2; }
+        ctx.drawImage(img, sx, sy, sw, sh, PAD, PAD, photoW, photoH);
+        ctx.restore();
+
+        // brackets
+        const bOff=18*SCALE, bLen=26*SCALE;
+        ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=3*SCALE; ctx.lineCap='round';
+        drawBracket(ctx, PAD+bOff, PAD+bOff, bLen, 1, 1);
+        drawBracket(ctx, PAD+photoW-bOff, PAD+photoH-bOff, bLen, -1, -1);
+
+        // divider
+        const metaY = PAD + photoH + PAD * 0.6;
+        ctx.strokeStyle='#f0f0f0'; ctx.lineWidth=1.5*SCALE;
+        ctx.beginPath(); ctx.moveTo(PAD,metaY); ctx.lineTo(cardW-PAD,metaY); ctx.stroke();
+
+        // device name
+        const nameY = metaY + 30*SCALE;
+        ctx.fillStyle='#1a1a1a';
+        ctx.font=`700 ${22*SCALE}px 'Sora', sans-serif`;
+        ctx.textBaseline='alphabetic';
+        const maxW = cardW - PAD*2 - 60*SCALE;
+        let nameStr = nameText;
+        while (ctx.measureText(nameStr).width > maxW && nameStr.length > 4)
+          nameStr = nameStr.slice(0,-4) + '…';
+        ctx.fillText(nameStr, PAD, nameY);
+
+        // camera icon
+        const iS=18*SCALE, iX=cardW-PAD-iS, iY=nameY-iS*.85;
+        ctx.fillStyle='#3aad5c'; drawCameraIcon(ctx, iX, iY, iS);
+
+        // specs (real or fallback)
+        ctx.fillStyle='#999';
+        ctx.font=`400 ${13*SCALE}px 'DM Mono', monospace`;
+        ctx.fillText(specsText, PAD, nameY + 24*SCALE);
+
+        resolve(cvs.toDataURL('image/jpeg', .92));
+      };
+      img.src = photoDataURL;
+    });
+  }
+
+  function roundRect(ctx,x,y,w,h,r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+  }
+  function drawBracket(ctx,cx,cy,len,dx,dy) {
+    ctx.beginPath();
+    ctx.moveTo(cx+dx*len,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+dy*len);
+    ctx.stroke();
+  }
+  function drawCameraIcon(ctx,x,y,s) {
+    ctx.beginPath(); ctx.roundRect(x,y+s*.2,s,s*.7,s*.15); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x+s*.5,y+s*.55,s*.2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#3aad5c'; ctx.beginPath(); ctx.roundRect(x+s*.3,y+s*.1,s*.3,s*.18,s*.08); ctx.fill();
+  }
+
+  /* ══════════════════════════════════════════════
+     CAMERA
+  ══════════════════════════════════════════════ */
+  async function loadDevices() {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cams = devices.filter(d => d.kind === 'videoinput');
+      deviceSelect.innerHTML = '';
+      cams.forEach((cam, i) => {
+        const opt = document.createElement('option');
+        opt.value = cam.deviceId;
+        opt.textContent = cam.label ? cleanLabel(cam.label) : `Camera ${i+1}`;
+        if (cam.deviceId === activeDeviceId) opt.selected = true;
+        deviceSelect.appendChild(opt);
+      });
+      deviceRow.style.display = cams.length > 1 ? '' : 'none';
+    } catch(_) { deviceRow.style.display = 'none'; }
+  }
+
+  function cleanLabel(raw) {
+    if (!raw) return 'Unknown Camera';
+    return raw.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)/gi, '').trim() || raw;
+  }
+
+  async function startCamera(deviceId) {
+    permBtn.textContent = 'Starting…'; permBtn.disabled = true;
+    permError.classList.remove('show');
+    if (specsInterval) { clearInterval(specsInterval); specsInterval = null; }
+    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: deviceId
+          ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 960 } }
+          : { facingMode: 'environment',     width: { ideal: 1280 }, height: { ideal: 960 } },
+        audio: false
+      });
+
+      currentStream  = stream;
+      video.srcObject = stream;
+      activeTrack    = stream.getVideoTracks()[0];
+      activeDeviceId = activeTrack.getSettings().deviceId || null;
+
+      const label = (activeTrack.label || '').toLowerCase();
+      const isFront = label.includes('front') || label.includes('facetime') || label.includes('user');
+      video.style.transform = isFront ? 'scaleX(-1)' : 'none';
+
+      isLive = true;
+      mediaBox.classList.add('live');
+      permOverlay.classList.add('hidden');
+
+      // set name from real track label
+      const friendly = cleanLabel(activeTrack.label);
+      deviceName.textContent = friendly.length > 30 ? friendly.slice(0,28)+'…' : friendly;
+
+      // setup zoom
+      setupZoom(activeTrack);
+
+      // read specs immediately, then refresh every 2s
+      updateSpecs();
+      specsInterval = setInterval(updateSpecs, 2000);
+
+      await loadDevices();
+
+    } catch(err) {
+      isLive = false; activeTrack = null;
+      permBtn.textContent = 'Allow Camera'; permBtn.disabled = false;
+      permOverlay.classList.remove('hidden');
+      liveDot.classList.remove('on');
+      const msg =
+        err.name === 'NotAllowedError'   ? 'Permission denied. Enable camera in browser settings.' :
+        err.name === 'NotFoundError'     ? 'No camera device found.' :
+        err.name === 'NotSupportedError' ? 'Requires HTTPS or localhost.' :
+        `Error: ${err.message}`;
+      permError.textContent = msg; permError.classList.add('show');
+    }
+  }
+
+  deviceSelect.addEventListener('change', () => startCamera(deviceSelect.value));
+  permBtn.addEventListener('click', () => startCamera(null));
+  camToggle.addEventListener('click', () => {
+    const opts = Array.from(deviceSelect.options);
+    if (opts.length > 1) {
+      const next = (opts.findIndex(o => o.selected) + 1) % opts.length;
+      deviceSelect.selectedIndex = next;
+      startCamera(opts[next].value);
+    } else { startCamera(null); }
+    camToggle.classList.add('spin');
+    camToggle.addEventListener('animationend', () => camToggle.classList.remove('spin'), { once: true });
+  });
+
+  /* ══════════════════════════════════════════════
+     DOWNLOAD
+  ══════════════════════════════════════════════ */
+  dlBtn.addEventListener('click', () => {
+    if (!lastFramedURL) return;
+    const a = document.createElement('a');
+    a.href = lastFramedURL; a.download = `framed_${Date.now()}.jpg`;
+    a.click();
+  });
+
+  /* ══════════════════════════════════════════════
+     CAPTURE
+  ══════════════════════════════════════════════ */
+  function capture() {
+    if (busy) return;
+    if (nameWrap.classList.contains('editing')) commitEdit();
+    busy = true; shutterBtn.disabled = true;
+
+    // snapshot current specs at the moment of capture
+    const snapSpecs = deviceSpecs.textContent;
+    const snapName  = deviceName.textContent;
+
+    const cvs = document.createElement('canvas');
+    if (isLive && video.readyState >= 2) {
+      cvs.width = video.videoWidth||640; cvs.height = video.videoHeight||480;
+      const ctx = cvs.getContext('2d');
+      const lbl = (activeTrack?.label||'').toLowerCase();
+      if (lbl.includes('front')||lbl.includes('facetime')||lbl.includes('user')) {
+        ctx.translate(cvs.width,0); ctx.scale(-1,1);
+      }
+      ctx.drawImage(video,0,0);
+    } else {
+      cvs.width=480; cvs.height=640;
+      const ctx=cvs.getContext('2d');
+      const g=ctx.createLinearGradient(0,0,0,640);
+      g.addColorStop(0,'#e09050'); g.addColorStop(1,'#a85c20');
+      ctx.fillStyle=g; ctx.fillRect(0,0,480,640);
+    }
+    const rawDataURL = cvs.toDataURL('image/jpeg', .92);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'capture-overlay';
+    const img = new Image(); img.src = rawDataURL;
+    overlay.appendChild(img);
+    document.body.appendChild(overlay);
+
+    card.style.opacity = '0'; card.style.transition = 'none';
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const rect = mediaBox.getBoundingClientRect();
+      overlay.classList.add('shrinking');
+      overlay.style.top          = rect.top    + 'px';
+      overlay.style.left         = rect.left   + 'px';
+      overlay.style.width        = rect.width  + 'px';
+      overlay.style.height       = rect.height + 'px';
+      overlay.style.borderRadius = '10px';
+
+      setTimeout(() => {
+        card.style.transition = '';
+        card.classList.add('captured');
+        card.addEventListener('animationend', () => card.classList.remove('captured'), { once: true });
+        // update specs live after capture
+        updateSpecs();
+      }, 260);
+
+      const cleanup = () => {
+        overlay.remove();
+        card.style.opacity = '';
+        busy = false; shutterBtn.disabled = false;
+        buildFramedImage(rawDataURL, snapName, snapSpecs).then(framedURL => {
+          lastFramedURL = framedURL;
+          dlBtn.disabled = false;
+          dlBtn.classList.remove('ready'); void dlBtn.offsetWidth;
+          dlBtn.classList.add('ready');
+          addThumb(framedURL);
+        });
+      };
+      overlay.addEventListener('transitionend', cleanup, { once: true });
+      setTimeout(cleanup, 850);
+    }));
+  }
+
+  function addThumb(src) {
+    if (thumbCount >= MAX_THUMBS) { thumbStrip.removeChild(thumbStrip.firstChild); thumbCount--; }
+    const img = document.createElement('img');
+    img.className='thumb'; img.src=src; img.title='Tap to download';
+    img.addEventListener('click', () => {
+      const a=document.createElement('a'); a.href=src; a.download=`framed_${Date.now()}.jpg`; a.click();
+    });
+    thumbStrip.appendChild(img); thumbCount++;
+  }
+
+  shutterBtn.addEventListener('click', capture);
+  document.addEventListener('keydown', e => {
+    if (e.code==='Space'||e.code==='Enter') { e.preventDefault(); capture(); }
+  });
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    permError.textContent='Camera API not available (requires HTTPS or localhost).';
+    permError.classList.add('show'); permBtn.disabled=true;
+  } else { startCamera(null); }
+})();
+</script>
+</body>
+</html>
