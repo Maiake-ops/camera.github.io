@@ -88,79 +88,109 @@
   }
   .media-box.live .placeholder-label { opacity: 0; pointer-events: none; }
 
+  /* ── Zoom slider overlay ──────────────────────── */
+  .zoom-bar {
+    position: absolute;
+    bottom: 12px; left: 12px; right: 12px;
+    z-index: 5;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .zoom-bar.visible { display: flex; }
+
+  .zoom-label {
+    font-family: 'DM Mono', monospace;
+    font-size: .6rem; letter-spacing: .08em;
+    color: rgba(255,255,255,.85);
+    text-shadow: 0 1px 3px rgba(0,0,0,.5);
+    background: rgba(0,0,0,.3);
+    padding: 2px 8px; border-radius: 99px;
+    backdrop-filter: blur(4px);
+  }
+
+  .zoom-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%; height: 3px;
+    border-radius: 99px;
+    background: rgba(255,255,255,.25);
+    outline: none;
+    cursor: pointer;
+  }
+  .zoom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 6px rgba(0,0,0,.4);
+    cursor: pointer;
+    border: 2px solid rgba(58,173,92,.7);
+  }
+  .zoom-slider::-moz-range-thumb {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 6px rgba(0,0,0,.4);
+    cursor: pointer;
+    border: 2px solid rgba(58,173,92,.7);
+  }
+
   /* ── Metadata ─────────────────────────────────── */
   .meta { padding: 0 4px; display: flex; flex-direction: column; gap: 4px; }
+  .meta-name-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 
-  .meta-name-row {
-    display: flex; align-items: center;
-    justify-content: space-between; gap: 6px;
-  }
-
-  /* ── Editable device name ─────────────────────── */
   .name-wrap {
-    flex: 1; min-width: 0;
-    position: relative;
-    cursor: text;
+    flex: 1; min-width: 0; position: relative; cursor: text;
   }
-
-  /* the visible label */
   .meta-title {
     font-size: .78rem; font-weight: 700; color: var(--text-dark);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    display: block;
-    padding: 2px 4px 2px 3px;
-    border-radius: 5px;
-    border: 1.5px solid transparent;
-    transition: border-color .15s, background .15s;
-    line-height: 1.4;
-    /* pencil hint on hover */
+    display: block; padding: 2px 4px 2px 3px;
+    border-radius: 5px; border: 1.5px solid transparent;
+    transition: border-color .15s, background .15s; line-height: 1.4;
   }
-  .name-wrap:hover .meta-title {
-    border-color: #d4e8d8;
-    background: #f5fbf6;
-  }
-
-  /* small pencil icon hint */
+  .name-wrap:hover .meta-title { border-color: #d4e8d8; background: #f5fbf6; }
   .name-wrap .edit-hint {
-    position: absolute;
-    right: -2px; top: 50%;
-    transform: translateY(-50%);
-    font-size: .55rem;
-    opacity: 0;
-    transition: opacity .15s;
-    pointer-events: none;
-    color: #3aad5c;
+    position: absolute; right: -2px; top: 50%; transform: translateY(-50%);
+    font-size: .55rem; opacity: 0; transition: opacity .15s;
+    pointer-events: none; color: #3aad5c;
   }
   .name-wrap:hover .edit-hint { opacity: 1; }
-
-  /* the inline input — hidden by default */
   .name-input {
-    display: none;
-    width: 100%;
-    font-family: 'Sora', sans-serif;
-    font-size: .78rem; font-weight: 700;
-    color: var(--text-dark);
-    background: #f5fbf6;
-    border: 1.5px solid #3aad5c;
-    border-radius: 5px;
-    padding: 2px 4px 2px 3px;
-    outline: none;
-    line-height: 1.4;
+    display: none; width: 100%;
+    font-family: 'Sora', sans-serif; font-size: .78rem; font-weight: 700;
+    color: var(--text-dark); background: #f5fbf6;
+    border: 1.5px solid #3aad5c; border-radius: 5px;
+    padding: 2px 4px 2px 3px; outline: none; line-height: 1.4;
     box-shadow: 0 0 0 3px rgba(58,173,92,.12);
   }
-
-  /* editing state */
   .name-wrap.editing .meta-title  { display: none; }
   .name-wrap.editing .name-input  { display: block; }
   .name-wrap.editing .edit-hint   { display: none; }
-
-  /* flash confirm animation on the label */
-  .meta-title.saved {
-    animation: savedFlash .4s ease forwards;
-  }
+  .meta-title.saved { animation: savedFlash .4s ease forwards; }
   @keyframes savedFlash {
     0%   { background: #d6f5e0; border-color: #3aad5c; }
     100% { background: transparent; border-color: transparent; }
+  }
+
+  /* ── Specs row ────────────────────────────────── */
+  .meta-specs {
+    font-family: 'DM Mono', monospace; font-size: .6rem; color: var(--text-muted);
+    letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* live indicator dot next to specs */
+  .specs-row { display: flex; align-items: center; gap: 5px; }
+  .live-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #ccc; flex-shrink: 0;
+    transition: background .3s;
+  }
+  .live-dot.on { background: #3aad5c; animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: .4; }
   }
 
   /* ── Download button ──────────────────────────── */
@@ -179,16 +209,7 @@
     background: #e8f5ec; border-color: #3aad5c; color: #2a8a47;
     animation: dlPulse .5s cubic-bezier(.34,1.56,.64,1);
   }
-  @keyframes dlPulse {
-    0%   { transform: scale(1); }
-    40%  { transform: scale(1.25); }
-    100% { transform: scale(1); }
-  }
-
-  .meta-specs {
-    font-family: 'DM Mono', monospace; font-size: .6rem; color: var(--text-muted);
-    letter-spacing: .05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
+  @keyframes dlPulse { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
 
   /* ── Device picker ────────────────────────────── */
   .device-row { padding: 0 4px; position: relative; }
@@ -259,10 +280,7 @@
     animation: thumbPop .3s cubic-bezier(.34,1.56,.64,1) forwards;
     transform: scale(0); pointer-events: all; cursor: pointer;
   }
-  @keyframes thumbPop {
-    from { transform: scale(0); }
-    to   { transform: scale(1); }
-  }
+  @keyframes thumbPop { from { transform: scale(0); } to { transform: scale(1); } }
 
   /* ═══ FULL-SCREEN → CARD SHRINK ══════════════════ */
   .capture-overlay {
@@ -326,6 +344,13 @@
       <div class="media-box" id="mediaBox">
         <video id="video" autoplay playsinline muted></video>
         <span class="placeholder-label">Picture</span>
+
+        <!-- zoom overlay inside media box -->
+        <div class="zoom-bar" id="zoomBar">
+          <span class="zoom-label" id="zoomLabel">1.0×</span>
+          <input class="zoom-slider" id="zoomSlider" type="range" step="0.1">
+        </div>
+
         <div class="perm-overlay" id="permOverlay">
           <span class="perm-icon">📷</span>
           <span class="perm-msg">Camera access needed</span>
@@ -340,21 +365,21 @@
 
       <div class="meta">
         <div class="meta-name-row">
-
-          <!-- editable name wrapper -->
           <div class="name-wrap" id="nameWrap" title="Click to rename">
             <span class="meta-title" id="deviceName">Device name</span>
             <span class="edit-hint">✏️</span>
             <input class="name-input" id="nameInput" type="text" maxlength="40" spellcheck="false">
           </div>
-
           <button class="dl-btn" id="dlBtn" disabled title="Download with frame">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M8 2v8M5 7l3 3 3-3"/><path d="M2 12h12"/>
             </svg>
           </button>
         </div>
-        <div class="meta-specs" id="deviceSpecs">—mm  f/—  1/—s  ISO—</div>
+        <div class="specs-row">
+          <span class="live-dot" id="liveDot"></span>
+          <span class="meta-specs" id="deviceSpecs">—mm  f/—  1/—s  ISO—</span>
+        </div>
       </div>
 
     </div>
@@ -385,338 +410,117 @@
   const deviceSelect = document.getElementById('deviceSelect');
   const nameWrap     = document.getElementById('nameWrap');
   const nameInput    = document.getElementById('nameInput');
+  const zoomBar      = document.getElementById('zoomBar');
+  const zoomSlider   = document.getElementById('zoomSlider');
+  const zoomLabel    = document.getElementById('zoomLabel');
+  const liveDot      = document.getElementById('liveDot');
 
   let currentStream  = null;
   let activeDeviceId = null;
+  let activeTrack    = null;
   let isLive         = false;
   let busy           = false;
   let thumbCount     = 0;
   let lastFramedURL  = null;
+  let currentZoom    = 1;
+  let specsInterval  = null;
   const MAX_THUMBS   = 4;
 
-  /* ── utils ─────────────────────────────────────── */
-  const randOf = a => a[Math.floor(Math.random() * a.length)];
-  function fakeSpecs() {
-    return `${randOf([24,26,28,35,50])}mm  f/${randOf(['1.8','2.0','2.2','2.4'])}  1/${randOf([60,100,125,250,500])}s  ISO${randOf([50,64,100,200,400])}`;
-  }
-  function cleanLabel(raw) {
-    if (!raw) return 'Unknown Camera';
-    return raw.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)/gi, '').trim() || raw;
-  }
-
   /* ══════════════════════════════════════════════
-     INLINE NAME EDITING
+     REAL SPECS from MediaTrackSettings
   ══════════════════════════════════════════════ */
-  function startEditing() {
-    nameInput.value = deviceName.textContent;
-    nameWrap.classList.add('editing');
-    nameInput.focus();
-    nameInput.select();
-  }
-
-  function commitEdit() {
-    const val = nameInput.value.trim();
-    if (val) {
-      deviceName.textContent = val;
-      // green flash to confirm
-      deviceName.classList.remove('saved');
-      void deviceName.offsetWidth;
-      deviceName.classList.add('saved');
-    }
-    nameWrap.classList.remove('editing');
-  }
-
-  function cancelEdit() {
-    nameWrap.classList.remove('editing');
-  }
-
-  // click on the label → enter edit mode
-  nameWrap.addEventListener('click', () => {
-    if (!nameWrap.classList.contains('editing')) startEditing();
-  });
-
-  // Enter = confirm, Escape = cancel
-  nameInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter')  { e.preventDefault(); commitEdit(); }
-    if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
-  });
-
-  // clicking away from the input also confirms
-  nameInput.addEventListener('blur', commitEdit);
-
-  // prevent card clicks from propagating while editing
-  nameInput.addEventListener('click', e => e.stopPropagation());
-
-  /* ══════════════════════════════════════════════
-     FRAME BUILDER
-  ══════════════════════════════════════════════ */
-  async function buildFramedImage(photoDataURL, nameText, specsText) {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => {
-        const SCALE  = 2;
-        const cardW  = 800 * SCALE;
-        const PAD    = 28 * SCALE;
-        const photoW = cardW - PAD * 2;
-        const photoH = photoW * (4 / 3);
-        const metaH  = 100 * SCALE;
-        const cardH  = PAD + photoH + PAD * 0.8 + metaH + PAD;
-
-        const cvs = document.createElement('canvas');
-        cvs.width = cardW; cvs.height = cardH;
-        const ctx = cvs.getContext('2d');
-
-        const r = 36 * SCALE;
-        ctx.fillStyle = '#ffffff';
-        roundRect(ctx, 0, 0, cardW, cardH, r); ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,.06)'; ctx.lineWidth = 2 * SCALE;
-        roundRect(ctx, SCALE, SCALE, cardW - 2*SCALE, cardH - 2*SCALE, r); ctx.stroke();
-
-        // photo
-        const imgR = 18 * SCALE;
-        ctx.save();
-        roundRect(ctx, PAD, PAD, photoW, photoH, imgR); ctx.clip();
-        const sr = img.width / img.height;
-        const dr = photoW / photoH;
-        let sx = 0, sy = 0, sw = img.width, sh = img.height;
-        if (sr > dr) { sw = img.height * dr; sx = (img.width - sw) / 2; }
-        else         { sh = img.width / dr;  sy = (img.height - sh) / 2; }
-        ctx.drawImage(img, sx, sy, sw, sh, PAD, PAD, photoW, photoH);
-        ctx.restore();
-
-        // brackets
-        const bOff = 18*SCALE, bLen = 26*SCALE;
-        ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3*SCALE; ctx.lineCap = 'round';
-        drawBracket(ctx, PAD+bOff, PAD+bOff, bLen, 1, 1);
-        drawBracket(ctx, PAD+photoW-bOff, PAD+photoH-bOff, bLen, -1, -1);
-
-        // divider
-        const metaY = PAD + photoH + PAD * 0.6;
-        ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 1.5*SCALE;
-        ctx.beginPath(); ctx.moveTo(PAD, metaY); ctx.lineTo(cardW-PAD, metaY); ctx.stroke();
-
-        // device name
-        const nameY = metaY + 28*SCALE;
-        ctx.fillStyle = '#1a1a1a';
-        ctx.font = `700 ${22*SCALE}px 'Sora', sans-serif`;
-        ctx.textBaseline = 'alphabetic';
-        const maxW = cardW - PAD*2 - 60*SCALE;
-        let nameStr = nameText;
-        while (ctx.measureText(nameStr).width > maxW && nameStr.length > 4)
-          nameStr = nameStr.slice(0,-4) + '…';
-        ctx.fillText(nameStr, PAD, nameY);
-
-        // camera icon
-        const iS = 18*SCALE, iX = cardW-PAD-iS, iY = nameY-iS*.85;
-        ctx.fillStyle = '#3aad5c';
-        drawCameraIcon(ctx, iX, iY, iS);
-
-        // specs
-        ctx.fillStyle = '#999';
-        ctx.font = `400 ${15*SCALE}px 'DM Mono', monospace`;
-        ctx.fillText(specsText, PAD, nameY + 22*SCALE);
-
-        resolve(cvs.toDataURL('image/jpeg', .92));
-      };
-      img.src = photoDataURL;
-    });
-  }
-
-  function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
-    ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-    ctx.lineTo(x+w,y+h-r);
-    ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-    ctx.lineTo(x+r,y+h);
-    ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-    ctx.lineTo(x,y+r);
-    ctx.quadraticCurveTo(x,y,x+r,y);
-    ctx.closePath();
-  }
-  function drawBracket(ctx,cx,cy,len,dx,dy) {
-    ctx.beginPath();
-    ctx.moveTo(cx+dx*len,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+dy*len);
-    ctx.stroke();
-  }
-  function drawCameraIcon(ctx,x,y,s) {
-    ctx.beginPath(); ctx.roundRect(x,y+s*.2,s,s*.7,s*.15); ctx.fill();
-    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x+s*.5,y+s*.55,s*.2,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='#3aad5c'; ctx.beginPath(); ctx.roundRect(x+s*.3,y+s*.1,s*.3,s*.18,s*.08); ctx.fill();
-  }
-
-  /* ══════════════════════════════════════════════
-     CAMERA
-  ══════════════════════════════════════════════ */
-  async function loadDevices() {
+  function readRealSpecs() {
+    if (!activeTrack) return null;
     try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const cams = devices.filter(d => d.kind === 'videoinput');
-      deviceSelect.innerHTML = '';
-      cams.forEach((cam, i) => {
-        const opt = document.createElement('option');
-        opt.value = cam.deviceId;
-        opt.textContent = cam.label ? cleanLabel(cam.label) : `Camera ${i+1}`;
-        if (cam.deviceId === activeDeviceId) opt.selected = true;
-        deviceSelect.appendChild(opt);
-      });
-      deviceRow.style.display = cams.length > 1 ? '' : 'none';
-    } catch(_) { deviceRow.style.display = 'none'; }
-  }
+      const s    = activeTrack.getSettings();
+      const caps = activeTrack.getCapabilities ? activeTrack.getCapabilities() : {};
 
-  async function startCamera(deviceId) {
-    permBtn.textContent = 'Starting…'; permBtn.disabled = true;
-    permError.classList.remove('show');
-    if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: deviceId
-          ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 960 } }
-          : { facingMode: 'environment',     width: { ideal: 1280 }, height: { ideal: 960 } },
-        audio: false
-      });
-      currentStream = stream;
-      video.srcObject = stream;
-      const track = stream.getVideoTracks()[0];
-      activeDeviceId = track.getSettings().deviceId || null;
-      const label = (track.label || '').toLowerCase();
-      const isFront = label.includes('front') || label.includes('facetime') || label.includes('user');
-      video.style.transform = isFront ? 'scaleX(-1)' : 'none';
-      isLive = true;
-      mediaBox.classList.add('live');
-      permOverlay.classList.add('hidden');
-      const friendly = cleanLabel(track.label);
-      deviceName.textContent  = friendly.length > 30 ? friendly.slice(0,28)+'…' : friendly;
-      deviceSpecs.textContent = fakeSpecs();
-      await loadDevices();
-    } catch(err) {
-      isLive = false;
-      permBtn.textContent = 'Allow Camera'; permBtn.disabled = false;
-      permOverlay.classList.remove('hidden');
-      const msg =
-        err.name === 'NotAllowedError'   ? 'Permission denied. Enable camera in browser settings.' :
-        err.name === 'NotFoundError'     ? 'No camera device found.' :
-        err.name === 'NotSupportedError' ? 'Requires HTTPS or localhost.' :
-        `Error: ${err.message}`;
-      permError.textContent = msg; permError.classList.add('show');
-    }
-  }
+      const parts = [];
 
-  deviceSelect.addEventListener('change', () => startCamera(deviceSelect.value));
-  permBtn.addEventListener('click', () => startCamera(null));
-  camToggle.addEventListener('click', () => {
-    const opts = Array.from(deviceSelect.options);
-    if (opts.length > 1) {
-      const next = (opts.findIndex(o => o.selected) + 1) % opts.length;
-      deviceSelect.selectedIndex = next;
-      startCamera(opts[next].value);
-    } else { startCamera(null); }
-    camToggle.classList.add('spin');
-    camToggle.addEventListener('animationend', () => camToggle.classList.remove('spin'), { once: true });
-  });
+      // focal length (rare — mostly Android Chrome)
+      if (s.focusDistance != null)
+        parts.push(`~${Math.round(1000 / (s.focusDistance || 1))}mm`);
 
-  /* ══════════════════════════════════════════════
-     DOWNLOAD
-  ══════════════════════════════════════════════ */
-  dlBtn.addEventListener('click', () => {
-    if (!lastFramedURL) return;
-    const a = document.createElement('a');
-    a.href = lastFramedURL; a.download = `framed_${Date.now()}.jpg`;
-    a.click();
-  });
+      // aperture / f-stop (very rare)
+      if (s.focusMode === 'manual' && caps.fStop)
+        parts.push(`f/${s.fStop?.toFixed(1) ?? '—'}`);
+      else if (parts.length === 0)
+        parts.push('f/—');                          // placeholder when unsupported
 
-  /* ══════════════════════════════════════════════
-     CAPTURE
-  ══════════════════════════════════════════════ */
-  function capture() {
-    if (busy) return;
-    // if user is editing name, commit first
-    if (nameWrap.classList.contains('editing')) commitEdit();
-
-    busy = true; shutterBtn.disabled = true;
-
-    const cvs = document.createElement('canvas');
-    if (isLive && video.readyState >= 2) {
-      cvs.width = video.videoWidth||640; cvs.height = video.videoHeight||480;
-      const ctx = cvs.getContext('2d');
-      const lbl = (currentStream?.getVideoTracks()[0]?.label||'').toLowerCase();
-      if (lbl.includes('front')||lbl.includes('facetime')||lbl.includes('user')) {
-        ctx.translate(cvs.width,0); ctx.scale(-1,1);
+      // exposure time → shutter speed fraction
+      if (s.exposureTime != null) {
+        // exposureTime is in 100µs units on some browsers, seconds on others
+        // Chrome reports in microseconds as a float? Actually spec says it's in 100µs units.
+        // Let's handle both: if value > 1 it's likely µs-ish, if < 1 it's seconds
+        let sec = s.exposureTime;
+        if (sec > 1) sec = sec / 10000;            // 100µs units → seconds
+        const frac = Math.round(1 / sec);
+        parts.push(`1/${frac}s`);
+      } else {
+        parts.push('1/—s');
       }
-      ctx.drawImage(video,0,0);
+
+      // ISO sensitivity
+      if (s.iso != null)
+        parts.push(`ISO${Math.round(s.iso)}`);
+      else
+        parts.push('ISO—');
+
+      // zoom (always real when supported)
+      if (s.zoom != null && s.zoom !== 1)
+        parts.push(`${s.zoom.toFixed(1)}×`);
+
+      // resolution
+      if (s.width && s.height)
+        parts.push(`${s.width}×${s.height}`);
+
+      return parts.join('  ');
+    } catch (_) { return null; }
+  }
+
+  function updateSpecs() {
+    const real = readRealSpecs();
+    if (real) {
+      deviceSpecs.textContent = real;
+      liveDot.classList.add('on');
     } else {
-      cvs.width=480; cvs.height=640;
-      const ctx=cvs.getContext('2d');
-      const g=ctx.createLinearGradient(0,0,0,640);
-      g.addColorStop(0,'#e09050'); g.addColorStop(1,'#a85c20');
-      ctx.fillStyle=g; ctx.fillRect(0,0,480,640);
+      // fallback: show what we CAN get (resolution + frameRate)
+      try {
+        const s = activeTrack?.getSettings() || {};
+        const fallback = [];
+        if (s.width && s.height) fallback.push(`${s.width}×${s.height}`);
+        if (s.frameRate)         fallback.push(`${Math.round(s.frameRate)}fps`);
+        if (s.zoom)              fallback.push(`${s.zoom.toFixed(1)}×`);
+        deviceSpecs.textContent = fallback.length ? fallback.join('  ') : '—mm  f/—  1/—s  ISO—';
+        liveDot.classList.add('on');
+      } catch(_) {
+        liveDot.classList.remove('on');
+      }
     }
-    const rawDataURL = cvs.toDataURL('image/jpeg', .92);
-
-    const overlay = document.createElement('div');
-    overlay.className = 'capture-overlay';
-    const img = new Image(); img.src = rawDataURL;
-    overlay.appendChild(img);
-    document.body.appendChild(overlay);
-
-    card.style.opacity = '0'; card.style.transition = 'none';
-
-    const currentNameText  = deviceName.textContent;
-    const newSpecs         = fakeSpecs();
-
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      const rect = mediaBox.getBoundingClientRect();
-      overlay.classList.add('shrinking');
-      overlay.style.top          = rect.top    + 'px';
-      overlay.style.left         = rect.left   + 'px';
-      overlay.style.width        = rect.width  + 'px';
-      overlay.style.height       = rect.height + 'px';
-      overlay.style.borderRadius = '10px';
-
-      setTimeout(() => {
-        card.style.transition = '';
-        card.classList.add('captured');
-        card.addEventListener('animationend', () => card.classList.remove('captured'), { once: true });
-        deviceSpecs.textContent = newSpecs;
-      }, 260);
-
-      const cleanup = () => {
-        overlay.remove();
-        card.style.opacity = '';
-        busy = false; shutterBtn.disabled = false;
-        buildFramedImage(rawDataURL, currentNameText, newSpecs).then(framedURL => {
-          lastFramedURL = framedURL;
-          dlBtn.disabled = false;
-          dlBtn.classList.remove('ready'); void dlBtn.offsetWidth;
-          dlBtn.classList.add('ready');
-          addThumb(framedURL);
-        });
-      };
-      overlay.addEventListener('transitionend', cleanup, { once: true });
-      setTimeout(cleanup, 850);
-    }));
   }
 
-  function addThumb(src) {
-    if (thumbCount >= MAX_THUMBS) { thumbStrip.removeChild(thumbStrip.firstChild); thumbCount--; }
-    const img = document.createElement('img');
-    img.className='thumb'; img.src=src; img.title='Tap to download';
-    img.addEventListener('click', () => {
-      const a=document.createElement('a'); a.href=src; a.download=`framed_${Date.now()}.jpg`; a.click();
-    });
-    thumbStrip.appendChild(img); thumbCount++;
+  /* ══════════════════════════════════════════════
+     ZOOM
+  ══════════════════════════════════════════════ */
+  function setupZoom(track) {
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    if (caps.zoom) {
+      const { min, max, step } = caps.zoom;
+      zoomSlider.min   = min;
+      zoomSlider.max   = max;
+      zoomSlider.step  = step || 0.1;
+      zoomSlider.value = track.getSettings().zoom || min;
+      currentZoom      = zoomSlider.value;
+      zoomLabel.textContent = `${parseFloat(currentZoom).toFixed(1)}×`;
+      zoomBar.classList.add('visible');
+    } else {
+      zoomBar.classList.remove('visible');
+    }
   }
 
-  shutterBtn.addEventListener('click', capture);
-  document.addEventListener('keydown', e => {
-    if (e.code==='Space'||e.code==='Enter') { e.preventDefault(); capture(); }
-  });
-
-  if (!navigator.mediaDevices?.getUserMedia) {
-    permError.textContent='Camera API not available (requires HTTPS or localhost).';
-    permError.classList.add('show'); permBtn.disabled=true;
-  } else { startCamera(null); }
-})();
-</script>
-</body>
-</html>
+  zoomSlider.addEventListener('input', async () => {
+    currentZoom = parseFloat(zoomSlider.value);
+    zoomLabel.textContent = `${currentZoom.toFixed(1)}×`;
+    if (activeTrack) {
+      try {
+        await activeTrack.applyConstraints({ advanced: [{ zoom: currentZoom 
